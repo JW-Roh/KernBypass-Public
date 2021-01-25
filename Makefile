@@ -1,17 +1,37 @@
-ARCHS = arm64 arm64e
-THEOS_DEVICE_IP=192.168.1.5
+ARCHS = arm64
 
 include $(THEOS)/makefiles/common.mk
 
-TOOL_NAME = changerootfs
+TOOL_NAME = changerootfs preparerootfs
+TARGET := iphone:clang:11.2:11.2
 
-changerootfs_FILES = main.m
+LIB_DIR := lib
 
-changerootfs_CFLAGS = -fobjc-arc -Wno-error=unused-variable -Wno-error=unused-function
+preparerootfs_FILES = preparerootfs.m kernel.m libdimentio.c vnode_utils.c
+preparerootfs_CFLAGS = $(CFLAGS) -fobjc-arc -Wno-error=unused-variable -Wno-error=unused-function -D USE_DEV_FAKEVAR
+preparerootfs_FRAMEWORKS = IOKit
+
+changerootfs_FILES = changerootfs.m kernel.m libdimentio.c vnode_utils.c
+changerootfs_CFLAGS = $(CFLAGS) -fobjc-arc -Wno-error=unused-variable -Wno-error=unused-function
+changerootfs_FRAMEWORKS = IOKit
+
+ifdef USE_JELBREK_LIB
+	preparerootfs_LDFLAGS = $(LIB_DIR)/jelbrekLib.dylib
+	changerootfs_LDFLAGS = $(LIB_DIR)/jelbrekLib.dylib
+endif
 
 include $(THEOS_MAKE_PATH)/tool.mk
 
+ifdef USE_JELBREK_LIB
 before-package::
-	ldid -S./ent.plist $(THEOS_STAGING_DIR)/usr/bin/changerootfs
+	$(THEOS)/toolchain/linux/iphone/bin/ldid -S./ent.plist $(THEOS_STAGING_DIR)/usr/lib/jelbrekLib.dylib
+endif
+
+before-package::
+	mkdir -p $(THEOS_STAGING_DIR)/usr/lib/
+	cp $(LIB_DIR)/jelbrekLib.dylib $(THEOS_STAGING_DIR)/usr/lib
+	/usr/bin/ldid -S./ent.plist $(THEOS_STAGING_DIR)/usr/bin/changerootfs
+	/usr/bin/ldid -S./ent.plist $(THEOS_STAGING_DIR)/usr/bin/preparerootfs
+
 SUBPROJECTS += zzzzzzzzznotifychroot
 include $(THEOS_MAKE_PATH)/aggregate.mk
